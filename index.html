@@ -363,13 +363,16 @@
 //  Firebase Console(console.firebase.google.com) > 프로젝트 설정 > 내 앱 > SDK 설정
 // ════════════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey: "AIzaSyBsNsg2mLJIg6awaXpBsnOCPTTgbEeKKvk",
+  authDomain: "my-scheduler-82ee9.firebaseapp.com",
+  projectId: "my-scheduler-82ee9",
+  storageBucket: "my-scheduler-82ee9.firebasestorage.app",
+  messagingSenderId: "773173796423",
+  appId: "1:773173796423:web:9b7af49e5095f86be41b62"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 // ════════════════════════════════════════════════════════════
 
 const IS_CONFIGURED = !firebaseConfig.apiKey.includes('YOUR_');
