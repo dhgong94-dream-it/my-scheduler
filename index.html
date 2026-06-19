@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Scheduler</title>
+<style>
+  :root {
+    --bg:#f0f2f5;--surface:#fff;--surface2:#f8f9fa;--border:#e2e8f0;
+    --text:#1a202c;--text-sub:#718096;--primary:#667eea;--primary-dark:#5a67d8;
+    --accent:#f6ad55;--danger:#fc8181;--success:#68d391;
+    --shadow:0 2px 12px rgba(0,0,0,.08);--radius:14px;--radius-sm:8px;
+  }
+  [data-theme="dark"]{--bg:#0f1117;--surface:#1a1d27;--surface2:#252836;--border:#2d3148;--text:#e2e8f0;--text-sub:#718096;--shadow:0 2px 12px rgba(0,0,0,.3);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s;}
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);}
+  .login-card{background:#fff;border-radius:20px;padding:40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2);max-width:380px;width:90%;}
+  .login-logo{font-size:32px;font-weight:800;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;}
+  .login-sub{font-size:14px;color:#718096;margin-bottom:28px;line-height:1.6;}
+  .btn-google{display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:600;color:#1a202c;cursor:pointer;width:100%;transition:all .2s;}
+  .btn-google:hover{border-color:#667eea;box-shadow:0 4px 16px rgba(102,126,234,.3);}
+  .btn-google img{width:20px;height:20px;}
+  #config-warning{background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:14px;font-size:12px;color:#856404;margin-top:16px;text-align:left;line-height:1.6;max-width:380px;width:90%;}
+  #config-warning code{background:#fff;padding:1px 4px;border-radius:3px;font-family:monospace;}
+
+  /* ── HEADER ── */
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+  .logo{font-size:17px;font-weight:700;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .header-right{display:flex;gap:6px;align-items:center;}
+  .user-info{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-sub);}
+  .user-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--primary);}
+  .sync-status{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--surface2);color:var(--text-sub);}
+  .sync-status.syncing{background:#fef3c7;color:#92400e;}
+  .sync-status.synced{background:#d1fae5;color:#065f46;}
+  .sync-status.error{background:#fee2e2;color:#991b1b;}
+  [data-theme=dark] .sync-status.synced{background:#064e3b;color:#6ee7b7;}
+  [data-theme=dark] .sync-status.syncing{background:#451a03;color:#fcd34d;}
+  [data-theme=dark] .sync-status.error{background:#450a0a;color:#fca5a5;}
+  .icon-btn{background:none;border:none;cursor:pointer;font-size:17px;padding:6px 8px;border-radius:var(--radius-sm);transition:background .2s;color:var(--text);}
+  .icon-btn:hover{background:var(--surface2);}
+
+  /* ── NAV ── */
+  .nav{display:flex;gap:4px;padding:10px 20px 0;overflow-x:auto;}
+  .nav::-webkit-scrollbar{height:3px;}
+  .nav::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  .tab-btn{padding:7px 14px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-sub);white-space:nowrap;transition:all .2s;}
+  .tab-btn.active{background:var(--surface);border-color:var(--border);color:var(--primary);font-weight:700;}
+  .tab-btn:hover:not(.active){background:var(--surface2);color:var(--text);}
+
+  /* ── MAIN ── */
+  main{padding:0 20px 40px;max-width:1200px;margin:0 auto;}
+  .page{display:none;padding-top:18px;}
+  .page.active{display:block;}
+  .panel{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:18px;margin-bottom:14px;}
+  .panel-title{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr;}}
+
+  input[type=text],input[type=number],textarea,select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:14px;color:var(--text);width:100%;outline:none;transition:border .2s;}
+  input:focus,textarea:focus{border-color:var(--primary);}
+  textarea{resize:vertical;min-height:80px;}
+  .btn{padding:8px 15px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-ghost{background:none;border:1px solid var(--border);color:var(--text-sub);}
+  .btn-ghost:hover{border-color:var(--primary);color:var(--primary);}
+
+  .task-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;background:var(--surface2);transition:all .2s;}
+  .task-item:hover{border-color:var(--primary);}
+  .task-item.done .task-text{text-decoration:line-through;color:var(--text-sub);}
+  .task-text{flex:1;font-size:14px;cursor:pointer;}
+  .task-del{background:none;border:none;cursor:pointer;color:var(--text-sub);font-size:13px;opacity:0;transition:opacity .2s;}
+  .task-item:hover .task-del{opacity:1;}
+  .checkbox{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);appearance:none;cursor:pointer;flex-shrink:0;transition:all .2s;}
+  .checkbox:checked{background:var(--primary);border-color:var(--primary);}
+  .checkbox:checked::after{content:'✓';color:#fff;font-size:11px;display:flex;justify-content:center;align-items:center;height:100%;}
+  .add-row{display:flex;gap:8px;margin-top:8px;}
+
+  .timer-display{font-size:52px;font-weight:700;text-align:center;letter-spacing:2px;font-variant-numeric:tabular-nums;color:var(--primary);margin:12px 0;}
+  .timer-controls{display:flex;justify-content:center;gap:10px;margin-bottom:14px;}
+  .pomo-label{font-size:12px;color:var(--text-sub);margin-bottom:4px;}
+  .pomo-settings{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .habit-item{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .habit-name{flex:1;font-size:14px;}
+  .habit-dots{display:flex;gap:5px;}
+  .dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-sub);background:var(--surface2);}
+  .dot.done{background:var(--success);border-color:var(--success);color:#fff;}
+  .week-label{display:flex;gap:5px;margin-bottom:4px;}
+  .week-day{width:26px;text-align:center;font-size:10px;color:var(--text-sub);}
+  .progress-bar{background:var(--border);border-radius:999px;height:6px;margin-top:10px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:999px;transition:width .4s;}
+
+  .time-grid{display:grid;grid-template-columns:42px repeat(7,1fr);gap:2px;}
+  .tg-header{font-size:11px;text-align:center;color:var(--text-sub);padding:4px 0;font-weight:600;}
+  .tg-time{font-size:10px;color:var(--text-sub);text-align:right;padding-right:6px;line-height:20px;height:20px;}
+  .tg-cell{height:20px;border-radius:3px;cursor:pointer;background:var(--surface2);border:1px solid var(--border);transition:background .1s;user-select:none;}
+  .tg-cell:hover{opacity:.8;}
+  .color-palette{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .color-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .2s;}
+  .color-swatch.active{border-color:var(--text);transform:scale(1.2);}
+
+  .kpt-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media(max-width:680px){.kpt-grid{grid-template-columns:1fr;}}
+  .kpt-card{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);}
+  .kpt-card-title{font-size:13px;font-weight:700;margin-bottom:8px;}
+  .kpt-k{border-top:3px solid var(--success);}
+  .kpt-p{border-top:3px solid var(--danger);}
+  .kpt-t{border-top:3px solid var(--accent);}
+
+  .finance-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .fin-card{background:var(--surface2);border-radius:var(--radius-sm);padding:16px;text-align:center;border:1px solid var(--border);}
+  .fin-label{font-size:12px;color:var(--text-sub);margin-bottom:4px;}
+  .fin-amount{font-size:22px;font-weight:700;}
+  .fin-income{color:var(--success);}
+  .fin-expense{color:var(--danger);}
+  .finance-list .fin-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;background:var(--surface2);}
+  .fin-type-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;}
+  .fin-type-income{background:#c6f6d5;color:#276749;}
+  .fin-type-expense{background:#fed7d7;color:#9b2c2c;}
+  [data-theme=dark] .fin-type-income{background:#1c4532;color:#68d391;}
+  [data-theme=dark] .fin-type-expense{background:#521b1b;color:#fc8181;}
+
+  .setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+  .setting-row:last-child{border-bottom:none;}
+  .setting-info h4{font-size:14px;font-weight:600;}
+  .setting-info p{font-size:12px;color:var(--text-sub);margin-top:2px;}
+  .toggle{width:42px;height:24px;border-radius:999px;background:var(--border);border:none;cursor:pointer;position:relative;transition:background .3s;flex-shrink:0;}
+  .toggle.on{background:var(--primary);}
+  .toggle::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .3s;}
+  .toggle.on::after{transform:translateX(18px);}
+
+  .badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;background:var(--primary);color:#fff;}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a202c;color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;opacity:0;transition:all .3s;z-index:9999;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:90%;max-width:420px;}
+  .modal h3{margin-bottom:16px;font-size:16px;}
+  .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">✨ My Scheduler</div>
+    <div class="login-sub">Google 계정으로 로그인하면<br>어느 기기에서도 데이터가 동기화됩니다.</div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Google 계정으로 시작하기
+    </button>
+  </div>
+  <div id="config-warning" style="display:none;">
+    ⚠️ <strong>Firebase 설정이 필요합니다.</strong><br>
+    HTML 파일의 상단 <code>firebaseConfig</code> 항목을 본인의 Firebase 프로젝트 값으로 교체해 주세요.<br>
+    자세한 방법은 아래 다운로드한 파일의 주석을 참고하세요.
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app" style="display:none;">
+  <header>
+    <div class="logo">✨ My Scheduler</div>
+    <div class="header-right">
+      <span class="sync-status" id="sync-badge">⏳ 동기화 중</span>
+      <div class="user-info">
+        <img class="user-avatar" id="user-avatar" src="" alt="">
+        <span id="user-name" style="font-size:12px;"></span>
+      </div>
+      <button class="icon-btn" id="themeBtn" onclick="toggleDark()">🌙</button>
+      <button class="icon-btn" onclick="signOutUser()" title="로그아웃">🚪</button>
+    </div>
+  </header>
+
+  <div class="nav">
+    <button class="tab-btn active" onclick="switchTab('board',event)">My Board 📋</button>
+    <button class="tab-btn" onclick="switchTab('timer',event)">타이머 ⏱️</button>
+    <button class="tab-btn" onclick="switchTab('habit',event)">습관 🔥</button>
+    <button class="tab-btn" onclick="switchTab('tracker',event)">Time Tracker 🕐</button>
+    <button class="tab-btn" onclick="switchTab('kpt',event)">KPT 성찰 ✨</button>
+    <button class="tab-btn" onclick="switchTab('finance',event)">가계부 💰</button>
+    <button class="tab-btn" onclick="switchTab('settings',event)">설정 ⚙️</button>
+  </div>
+
+  <main>
+    <!-- MY BOARD -->
+    <div id="page-board" class="page active">
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-title">📋 오늘 할 일 <span id="today-count" class="badge">0</span></div>
+          <div id="today-list"></div>
+          <div class="add-row">
+            <input type="text" id="today-input" placeholder="할 일을 입력하세요..." onkeydown="if(event.key==='Enter')addTask('today')">
+            <button class="btn btn-primary btn-sm" onclick="addTask('today')">추가</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">📅 내일 할 일 <span id="tmr-count" class="badge">0</span></div>
+          <div id="tmr-list"></div>
+          <div class="add-row">
+            <input type="text" id="tmr-input" placeholder="할 일을 입력하세요..." onkeydown="if(event.key==='Enter')addTask('tmr')">
+            <button class="btn btn-primary btn-sm" onclick="addTask('tmr')">추가</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">📝 오늘의 메모</div>
+        <textarea id="daily-memo" placeholder="자유롭게 메모하세요..." oninput="scheduleCloudSave()" style="min-height:120px"></textarea>
+      </div>
+    </div>
+
+    <!-- TIMER -->
+    <div id="page-timer" class="page">
+      <div class="panel" style="max-width:480px;margin:0 auto;">
+        <div class="panel-title" style="justify-content:center;">⏱️ 타이머</div>
+        <div class="timer-display" id="timer-display">00:00:00</div>
+        <div class="timer-controls">
+          <button class="btn btn-primary" id="timer-start-btn" onclick="timerToggle()">▶ 시작</button>
+          <button class="btn btn-ghost" onclick="timerReset()">↺ 초기화</button>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
+        <div class="panel-title">🍅 뽀모도로</div>
+        <div class="pomo-settings">
+          <div><div class="pomo-label">집중 (분)</div><input type="number" id="pomo-focus" value="25" min="1" max="120" oninput="scheduleCloudSave()"></div>
+          <div><div class="pomo-label">휴식 (분)</div><input type="number" id="pomo-break" value="5" min="1" max="60" oninput="scheduleCloudSave()"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary" style="flex:1" onclick="pomoStart()">🍅 시작</button>
+          <button class="btn btn-ghost" onclick="pomoStop()">중단</button>
+        </div>
+        <div id="pomo-status" style="text-align:center;margin-top:10px;font-size:13px;color:var(--text-sub)"></div>
+      </div>
+      <div class="panel" style="max-width:480px;margin:0 auto;">
+        <div class="panel-title">📋 오늘의 집중 기록</div>
+        <div id="timer-log" style="max-height:200px;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- HABIT -->
+    <div id="page-habit" class="page">
+      <div class="panel">
+        <div class="panel-title">🔥 습관 트래커</div>
+        <div class="add-row" style="margin-bottom:14px;">
+          <input type="text" id="habit-input" placeholder="새 습관 추가..." onkeydown="if(event.key==='Enter')addHabit()">
+          <button class="btn btn-primary btn-sm" onclick="addHabit()">추가</button>
+        </div>
+        <div class="week-label"><div style="width:42px"></div><div id="week-days-label" style="display:flex;gap:5px;"></div></div>
+        <div id="habit-list"></div>
+        <div style="margin-top:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-sub);margin-bottom:4px;"><span>이번 주 달성률</span><span id="habit-score">0%</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="habit-progress" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIME TRACKER -->
+    <div id="page-tracker" class="page">
+      <div class="panel">
+        <div class="panel-title" style="justify-content:space-between;"><span>🕐 주간 타임 트래커</span><button class="btn btn-ghost btn-sm" onclick="clearTracker()">🧹 초기화</button></div>
+        <div class="color-palette" id="color-palette"></div>
+        <div style="overflow-x:auto;"><div id="time-grid" class="time-grid" style="min-width:400px;"></div></div>
+      </div>
+    </div>
+
+    <!-- KPT -->
+    <div id="page-kpt" class="page">
+      <div class="panel">
+        <div class="panel-title">✨ KPT 성찰 — <span id="kpt-date" style="font-weight:400;color:var(--text-sub);"></span></div>
+        <div class="kpt-grid">
+          <div class="kpt-card kpt-k"><div class="kpt-card-title">✅ KEEP</div><textarea id="kpt-keep" placeholder="잘 한 점, 유지하고 싶은 것..." oninput="scheduleCloudSave()"></textarea></div>
+          <div class="kpt-card kpt-p"><div class="kpt-card-title">⚠️ PROBLEM</div><textarea id="kpt-problem" placeholder="아쉬운 점, 개선이 필요한 것..." oninput="scheduleCloudSave()"></textarea></div>
+          <div class="kpt-card kpt-t"><div class="kpt-card-title">🚀 TRY</div><textarea id="kpt-try" placeholder="내일 시도할 해결책..." oninput="scheduleCloudSave()"></textarea></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+          <button class="btn btn-ghost btn-sm" onclick="loadKptHistory()">📖 지난 기록</button>
+          <button class="btn btn-primary btn-sm" onclick="saveKptEntry()">💾 오늘 기록 저장</button>
+        </div>
+      </div>
+      <div id="kpt-history-panel" class="panel" style="display:none;">
+        <div class="panel-title">📖 KPT 히스토리</div>
+        <div id="kpt-history-list"></div>
+      </div>
+    </div>
+
+    <!-- FINANCE -->
+    <div id="page-finance" class="page">
+      <div class="finance-summary">
+        <div class="fin-card"><div class="fin-label">이번 달 총 수입</div><div class="fin-amount fin-income" id="fin-total-income">₩0</div></div>
+        <div class="fin-card"><div class="fin-label">이번 달 총 지출</div><div class="fin-amount fin-expense" id="fin-total-expense">₩0</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">+ 새 내역 추가</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;">
+          <div><div class="pomo-label">날짜</div><input type="text" id="fin-date"></div>
+          <div><div class="pomo-label">항목</div><input type="text" id="fin-name" placeholder="항목명"></div>
+          <div><div class="pomo-label">금액 (원)</div><input type="number" id="fin-amount" placeholder="10000"></div>
+          <div><div class="pomo-label">유형</div><select id="fin-type"><option value="expense">지출</option><option value="income">수입</option></select></div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="addFinance()">추가하기</button>
+      </div>
+      <div class="panel"><div class="panel-title">📋 내역</div><div class="finance-list" id="finance-list"></div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="page-settings" class="page">
+      <div class="panel">
+        <div class="panel-title">⚙️ 설정</div>
+        <div class="setting-row">
+          <div class="setting-info"><h4>🌙 다크모드</h4><p>어두운 화면으로 전환</p></div>
+          <button class="toggle" id="dark-toggle" onclick="toggleDark()"></button>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><h4>☁️ 클라우드 동기화</h4><p>로그인된 계정으로 자동 동기화됩니다</p></div>
+          <span id="sync-account" style="font-size:12px;color:var(--text-sub)"></span>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><h4>🔄 강제 동기화</h4><p>지금 즉시 클라우드에 저장</p></div>
+          <button class="btn btn-ghost btn-sm" onclick="forceSave()">저장하기</button>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><h4>🗑️ 전체 초기화</h4><p>모든 데이터 영구 삭제 (되돌릴 수 없음)</p></div>
+          <button class="btn btn-danger btn-sm" onclick="openModal('resetModal')">초기화</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="resetModal">
+  <div class="modal">
+    <h3>🗑️ 전체 초기화</h3>
+    <p style="font-size:13px;color:var(--danger);margin-bottom:12px;">⚠️ 클라우드 데이터 포함 모든 데이터가 삭제됩니다.</p>
+    <p style="font-size:13px;margin-bottom:8px;"><strong>"초기화"</strong> 를 입력하세요:</p>
+    <input type="text" id="reset-confirm" placeholder="초기화">
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="doReset()">초기화 실행</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('resetModal')">취소</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════
+  FIREBASE SDK  (v9 compat mode — CDN)
+  ═══════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  🔥 STEP 1: 여기에 본인의 Firebase 설정값을 붙여넣으세요
+//  Firebase Console(console.firebase.google.com) > 프로젝트 설정 > 내 앱 > SDK 설정
+// ════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+// ════════════════════════════════════════════════════════════
+
+const IS_CONFIGURED = !firebaseConfig.apiKey.includes('YOUR_');
+
+let app, auth, db, currentUser = null;
+let saveTimer = null, isSaving = false;
+
+if (IS_CONFIGURED) {
+  app  = firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db   = firebase.firestore();
+} else {
+  document.getElementById('config-warning').style.display = 'block';
+}
+
+// ── AUTH ──
+function signInWithGoogle() {
+  if (!IS_CONFIGURED) { alert('Firebase 설정값을 먼저 입력해 주세요.\nHTML 파일을 텍스트 에디터로 열어 firebaseConfig를 수정하세요.'); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    if(err.code==='auth/unauthorized-domain') {
+      alert('❌ 이 도메인은 Firebase에서 허용되지 않습니다.\n\nFirebase Console > Authentication > Sign-in method > 승인된 도메인에\n현재 사이트 주소를 추가해 주세요.\n\n(로컬 파일은 localhost로 실행해야 합니다.)');
+    } else { alert('로그인 실패: '+err.message); }
+  });
+}
+function signOutUser() {
+  if(confirm('로그아웃 하시겠어요?')) auth.signOut();
+}
+
+if (IS_CONFIGURED) {
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('user-name').textContent = user.displayName || user.email;
+      document.getElementById('user-avatar').src = user.photoURL || '';
+      document.getElementById('sync-account').textContent = user.email;
+      await loadFromCloud();
+      renderAll();
+    } else {
+      currentUser = null;
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+  });
+}
+
+// ── CLOUD SYNC ──
+function setSyncBadge(state) {
+  const el = document.getElementById('sync-badge');
+  const map = { syncing:['syncing','☁️ 저장 중...'], synced:['synced','✅ 저장됨'], error:['error','❌ 오류'] };
+  el.className = 'sync-status ' + map[state][0];
+  el.textContent = map[state][1];
+}
+
+function getAppState() {
+  return {
+    today_tasks:   lsGet('today_tasks')   || [],
+    tmr_tasks:     lsGet('tmr_tasks')     || [],
+    daily_memo:    lsGet('daily_memo')    || '',
+    habits:        lsGet('habits')        || [],
+    timer_log:     lsGet('timer_log')     || [],
+    tg_data:       lsGet('tg_data')       || {},
+    kpt_draft:     lsGet('kpt_draft')     || {},
+    kpt_entries:   lsGet('kpt_entries')   || {},
+    finance:       lsGet('finance')       || [],
+    pomo_focus:    lsGet('pomo_focus')    || 25,
+    pomo_break:    lsGet('pomo_break')    || 5,
+    dark:          lsGet('dark')          || false,
+    updated_at:    new Date().toISOString()
+  };
+}
+
+async function loadFromCloud() {
+  if (!currentUser) return;
+  setSyncBadge('syncing');
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).collection('data').doc('appState').get();
+    if (doc.exists) {
+      const d = doc.data();
+      Object.entries(d).forEach(([k,v]) => { if(k!=='updated_at') lsSet(k,v); });
+    }
+    setSyncBadge('synced');
+  } catch(e) { setSyncBadge('error'); console.error(e); }
+}
+
+async function saveToCloud() {
+  if (!currentUser || isSaving) return;
+  isSaving = true; setSyncBadge('syncing');
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('data').doc('appState').set(getAppState());
+    setSyncBadge('synced');
+  } catch(e) { setSyncBadge('error'); console.error(e); }
+  isSaving = false;
+}
+
+function scheduleCloudSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToCloud, 1500);
+}
+function forceSave() { saveToCloud().then(()=>toast('✅ 클라우드에 저장했습니다!')); }
+
+// ── LOCAL STORAGE ──
+const lsGet = k => { try { return JSON.parse(localStorage.getItem('mys_'+k)); } catch(e){ return null; } };
+const lsSet = (k,v) => localStorage.setItem('mys_'+k, JSON.stringify(v));
+
+function localSave(k, v) { lsSet(k, v); scheduleCloudSave(); }
+
+// ── TOAST ──
+const toast = msg => {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+};
+
+// ── NAVIGATION ──
+function switchTab(id, e) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(e && e.target) e.target.classList.add('active');
+}
+
+// ════ MY BOARD ════
+function renderTasks(key) {
+  const tasks = lsGet(key+'_tasks') || [];
+  const listEl = document.getElementById(key+'-list');
+  const countEl = document.getElementById(key+'-count');
+  listEl.innerHTML = '';
+  tasks.forEach((t,i) => {
+    const div = document.createElement('div');
+    div.className = 'task-item'+(t.done?' done':'');
+    div.innerHTML = `<input type="checkbox" class="checkbox" ${t.done?'checked':''} onchange="toggleTask('${key}',${i})"><span class="task-text" ondblclick="editTask('${key}',${i})">${t.text}</span><button class="task-del" onclick="deleteTask('${key}',${i})">✕</button>`;
+    listEl.appendChild(div);
+  });
+  if(countEl) countEl.textContent = tasks.filter(t=>!t.done).length;
+}
+function addTask(key) {
+  const inp = document.getElementById(key+'-input');
+  const text = inp.value.trim(); if(!text) return;
+  const tasks = lsGet(key+'_tasks') || [];
+  tasks.push({text, done:false});
+  localSave(key+'_tasks', tasks);
+  inp.value=''; renderTasks(key);
+}
+function toggleTask(key,i){const tasks=lsGet(key+'_tasks')||[];tasks[i].done=!tasks[i].done;localSave(key+'_tasks',tasks);renderTasks(key);}
+function deleteTask(key,i){const tasks=lsGet(key+'_tasks')||[];tasks.splice(i,1);localSave(key+'_tasks',tasks);renderTasks(key);}
+function editTask(key,i){const tasks=lsGet(key+'_tasks')||[];const n=prompt('수정:',tasks[i].text);if(n&&n.trim()){tasks[i].text=n.trim();localSave(key+'_tasks',tasks);renderTasks(key);}}
+
+// ════ TIMER ════
+let timerInterval=null,timerRunning=false,timerSecs=0;
+let pomoMode=false,pomoPhase='focus',pomoRemain=0,pomoSession=0;
+function fmtTime(s){return[Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(n=>String(n).padStart(2,'0')).join(':');}
+function updateTimerDisplay(){document.getElementById('timer-display').textContent=fmtTime(pomoMode?pomoRemain:timerSecs);}
+function timerToggle(){const btn=document.getElementById('timer-start-btn');if(timerRunning){clearInterval(timerInterval);timerRunning=false;btn.textContent='▶ 시작';logTimer(timerSecs);}else{timerRunning=true;btn.textContent='⏸ 일시정지';timerInterval=setInterval(()=>{timerSecs++;updateTimerDisplay();},1000);}}
+function timerReset(){clearInterval(timerInterval);timerRunning=false;timerSecs=0;document.getElementById('timer-start-btn').textContent='▶ 시작';updateTimerDisplay();}
+function logTimer(s){if(s<10)return;const logs=lsGet('timer_log')||[];logs.unshift({time:new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}),duration:fmtTime(s)});if(logs.length>20)logs.pop();localSave('timer_log',logs);renderTimerLog();}
+function renderTimerLog(){const logs=lsGet('timer_log')||[];const el=document.getElementById('timer-log');el.innerHTML=logs.length?logs.map(l=>`<div class="task-item"><span class="task-text">⏱ ${l.time}</span><span style="font-size:12px;color:var(--text-sub)">${l.duration}</span></div>`).join(''):'<p style="color:var(--text-sub);font-size:13px;">아직 기록이 없어요.</p>';}
+function pomoStart(){clearInterval(timerInterval);pomoMode=true;pomoPhase='focus';pomoSession=0;pomoRemain=(parseInt(document.getElementById('pomo-focus').value)||25)*60;document.getElementById('pomo-status').textContent='🍅 집중 시작!';updateTimerDisplay();timerInterval=setInterval(pomoTick,1000);}
+function pomoTick(){if(pomoRemain>0){pomoRemain--;updateTimerDisplay();return;}if(pomoPhase==='focus'){pomoSession++;pomoPhase='break';pomoRemain=(parseInt(document.getElementById('pomo-break').value)||5)*60;document.getElementById('pomo-status').textContent=`✅ 집중 완료! 세션 ${pomoSession} — 휴식 🧘`;}else{pomoPhase='focus';pomoRemain=(parseInt(document.getElementById('pomo-focus').value)||25)*60;document.getElementById('pomo-status').textContent=`🍅 세션 ${pomoSession} 완료 — 다시 집중!`;}}
+function pomoStop(){clearInterval(timerInterval);pomoMode=false;timerSecs=0;document.getElementById('pomo-status').textContent='';updateTimerDisplay();}
+
+// ════ HABIT ════
+function getWeekDates(){const now=new Date();const mon=new Date(now);mon.setDate(now.getDate()-((now.getDay()+6)%7));return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d.toISOString().slice(0,10);});}
+function renderHabits(){
+  const habits=lsGet('habits')||[];const weekDates=getWeekDates();
+  document.getElementById('week-days-label').innerHTML=weekDates.map((d,i)=>`<div class="week-day">${['월','화','수','목','금','토','일'][i]}<br>${d.slice(8)}</div>`).join('');
+  const listEl=document.getElementById('habit-list');listEl.innerHTML='';
+  let total=0,done=0;
+  habits.forEach((h,hi)=>{
+    const row=document.createElement('div');row.className='habit-item';
+    const dots=weekDates.map((d)=>{const isDone=h.done&&h.done[d];total++;if(isDone)done++;return`<div class="dot ${isDone?'done':''}" onclick="toggleHabit(${hi},'${d}')">${isDone?'✓':''}</div>`;}).join('');
+    row.innerHTML=`<span class="habit-name">${h.name}</span><div class="habit-dots">${dots}</div><button onclick="deleteHabit(${hi})" style="background:none;border:none;cursor:pointer;color:var(--text-sub);font-size:12px;">✕</button>`;
+    listEl.appendChild(row);
+  });
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('habit-score').textContent=pct+'%';
+  document.getElementById('habit-progress').style.width=pct+'%';
+}
+function addHabit(){const inp=document.getElementById('habit-input');const name=inp.value.trim();if(!name)return;const habits=lsGet('habits')||[];habits.push({name,done:{}});localSave('habits',habits);inp.value='';renderHabits();}
+function toggleHabit(hi,date){const habits=lsGet('habits')||[];if(!habits[hi].done)habits[hi].done={};habits[hi].done[date]=!habits[hi].done[date];localSave('habits',habits);renderHabits();}
+function deleteHabit(hi){const habits=lsGet('habits')||[];habits.splice(hi,1);localSave('habits',habits);renderHabits();}
+
+// ════ TIME TRACKER ════
+const TG_COLORS=['#667eea','#f6ad55','#68d391','#fc8181','#76e4f7','#e879f9','#fbbf24','#a78bfa'];
+let selColor=TG_COLORS[0],isDragging=false;
+function buildTracker(){
+  const palette=document.getElementById('color-palette');palette.innerHTML='';
+  TG_COLORS.forEach((c,i)=>{const sw=document.createElement('div');sw.className='color-swatch'+(i===0?' active':'');sw.style.background=c;sw.dataset.color=c;sw.onclick=()=>{selColor=c;document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');};palette.appendChild(sw);});
+  const grid=document.getElementById('time-grid');grid.innerHTML='';grid.appendChild(document.createElement('div'));
+  ['월','화','수','목','금','토','일'].forEach(d=>{const h=document.createElement('div');h.className='tg-header';h.textContent=d;grid.appendChild(h);});
+  const tgData=lsGet('tg_data')||{};
+  for(let h=0;h<24;h++){for(let q=0;q<4;q++){const idx=h*4+q;const tEl=document.createElement('div');tEl.className='tg-time';tEl.textContent=q===0?String(h).padStart(2,'0')+':00':'';grid.appendChild(tEl);for(let d=0;d<7;d++){const cell=document.createElement('div');const key=`${d}_${idx}`;cell.className='tg-cell';cell.dataset.key=key;const saved=tgData[key];if(saved){cell.style.background=saved;cell.classList.add('colored');}cell.addEventListener('mousedown',(e)=>{isDragging=true;paintCell(cell,key);e.preventDefault();});cell.addEventListener('mouseover',()=>{if(isDragging)paintCell(cell,key);});grid.appendChild(cell);}}}
+  document.addEventListener('mouseup',()=>isDragging=false);
+}
+function paintCell(cell,key){const tgData=lsGet('tg_data')||{};if(cell.style.background===selColor){cell.style.background='';cell.classList.remove('colored');delete tgData[key];}else{cell.style.background=selColor;cell.classList.add('colored');tgData[key]=selColor;}localSave('tg_data',tgData);}
+function clearTracker(){if(!confirm('초기화할까요?'))return;localSave('tg_data',{});buildTracker();}
+
+// ════ KPT ════
+function initKpt(){document.getElementById('kpt-date').textContent=new Date().toISOString().slice(0,10);const d=lsGet('kpt_draft')||{};document.getElementById('kpt-keep').value=d.keep||'';document.getElementById('kpt-problem').value=d.problem||'';document.getElementById('kpt-try').value=d.try||'';}
+function saveKptDraft(){lsSet('kpt_draft',{keep:document.getElementById('kpt-keep').value,problem:document.getElementById('kpt-problem').value,try:document.getElementById('kpt-try').value});scheduleCloudSave();}
+function saveKptEntry(){const today=new Date().toISOString().slice(0,10);const entries=lsGet('kpt_entries')||{};entries[today]={keep:document.getElementById('kpt-keep').value,problem:document.getElementById('kpt-problem').value,try:document.getElementById('kpt-try').value};localSave('kpt_entries',entries);toast('✅ KPT 기록 저장!');}
+function loadKptHistory(){const panel=document.getElementById('kpt-history-panel');panel.style.display=panel.style.display==='none'?'block':'none';if(panel.style.display==='none')return;const entries=lsGet('kpt_entries')||{};const dates=Object.keys(entries).sort().reverse();const listEl=document.getElementById('kpt-history-list');if(!dates.length){listEl.innerHTML='<p style="color:var(--text-sub);font-size:13px;">저장된 기록이 없어요.</p>';return;}listEl.innerHTML=dates.map(d=>`<div style="margin-bottom:12px;border-left:3px solid var(--primary);padding-left:12px;"><div style="font-size:13px;font-weight:700;margin-bottom:6px;">${d}</div><div style="font-size:12px;color:var(--text-sub)">✅ ${entries[d].keep||'-'}</div><div style="font-size:12px;color:var(--text-sub)">⚠️ ${entries[d].problem||'-'}</div><div style="font-size:12px;color:var(--text-sub)">🚀 ${entries[d].try||'-'}</div></div>`).join('');}
+
+// ════ FINANCE ════
+function renderFinance(){const records=lsGet('finance')||[];const now=new Date();const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;let inc=0,exp=0;const list=document.getElementById('finance-list');list.innerHTML='';[...records].reverse().forEach((r,ri)=>{const isTM=r.date&&r.date.startsWith(ym);if(isTM){if(r.type==='income')inc+=r.amount;else exp+=r.amount;}const div=document.createElement('div');div.className='fin-row';div.innerHTML=`<span class="fin-type-badge fin-type-${r.type}">${r.type==='income'?'수입':'지출'}</span><span style="flex:1;font-size:14px">${r.name}</span><span style="font-size:12px;color:var(--text-sub)">${r.date}</span><span style="font-weight:700;color:${r.type==='income'?'var(--success)':'var(--danger)'}">${r.amount.toLocaleString()}원</span><button onclick="deleteFinance(${records.length-1-ri})" style="background:none;border:none;cursor:pointer;color:var(--text-sub);font-size:12px;opacity:.5">✕</button>`;list.appendChild(div);});document.getElementById('fin-total-income').textContent='₩'+inc.toLocaleString();document.getElementById('fin-total-expense').textContent='₩'+exp.toLocaleString();}
+function addFinance(){const date=document.getElementById('fin-date').value.trim();const name=document.getElementById('fin-name').value.trim();const amount=parseInt(document.getElementById('fin-amount').value);const type=document.getElementById('fin-type').value;if(!name||!amount)return toast('항목과 금액을 입력해주세요.');const records=lsGet('finance')||[];records.push({date:date||new Date().toISOString().slice(0,10),name,amount,type});localSave('finance',records);document.getElementById('fin-name').value='';document.getElementById('fin-amount').value='';renderFinance();}
+function deleteFinance(i){const r=lsGet('finance')||[];r.splice(i,1);localSave('finance',r);renderFinance();}
+
+// ════ DARK MODE ════
+function toggleDark(){const isDark=document.documentElement.dataset.theme==='dark';document.documentElement.dataset.theme=isDark?'':'dark';document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';document.getElementById('dark-toggle').classList.toggle('on',!isDark);localSave('dark',!isDark);}
+
+// ════ RESET ════
+function doReset(){if(document.getElementById('reset-confirm').value!=='초기화')return toast('정확히 입력해주세요.');Object.keys(localStorage).filter(k=>k.startsWith('mys_')).forEach(k=>localStorage.removeItem(k));if(currentUser)db.collection('users').doc(currentUser.uid).collection('data').doc('appState').delete();toast('🗑️ 초기화 완료. 새로고침합니다...');closeModal('resetModal');setTimeout(()=>location.reload(),1500);}
+
+// ════ MODAL ════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+// ════ RENDER ALL ════
+function renderAll(){
+  const dark=lsGet('dark');
+  if(dark){document.documentElement.dataset.theme='dark';document.getElementById('themeBtn').textContent='☀️';document.getElementById('dark-toggle').classList.add('on');}
+  const pf=lsGet('pomo_focus');if(pf)document.getElementById('pomo-focus').value=pf;
+  const pb=lsGet('pomo_break');if(pb)document.getElementById('pomo-break').value=pb;
+  document.getElementById('fin-date').value=new Date().toISOString().slice(0,10);
+  const memo=lsGet('daily_memo');if(memo)document.getElementById('daily-memo').value=memo;
+  document.getElementById('daily-memo').addEventListener('input',function(){lsSet('daily_memo',this.value);scheduleCloudSave();});
+  document.getElementById('kpt-keep').addEventListener('input',saveKptDraft);
+  document.getElementById('kpt-problem').addEventListener('input',saveKptDraft);
+  document.getElementById('kpt-try').addEventListener('input',saveKptDraft);
+  renderTasks('today');renderTasks('tmr');renderTimerLog();renderHabits();buildTracker();initKpt();renderFinance();updateTimerDisplay();
+}
+</script>
+</body>
+</html>
